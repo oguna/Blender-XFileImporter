@@ -1,30 +1,23 @@
-Blender-XFileImporter
-=====================
+# Blender XFile Importer
 
-Import DirectX-X-MeshFile to Blender
+This blender addon can import DirectX XFile (.x).
 
-## 概要
-3DCGソフトであるBlenderにDirectXのXファイルをインポートするPythonスクリプトです。
-アドオンではありません。
+![](screenshot.jpg)
 
-## 使い方
-3つのファイル、XFileImmporter、XFileHelper、XFileParserをBlenderで開きます。
-XFileImporterのfilepath変数に読み込むXファイルのパスを指定して、
-スクリプトを実行してください。
+## License
 
-## 対応状況
-- 日本語に対応してません。
-テクスチャファイル名はすべてASCIIで表現できる文字のみにしてください。
-- アニメーション、ボーン、フレームなどには対応しません。
-- テキスト形式に対応しますが、バイナリ形式に対応できません。
-DirectX SDK Toolsのメッシュコンバーターでテキスト形式に変換するか、
-PMXEditorでエクスポートしてください。
+Our license is based on the modified, 3-clause BSD-License.
 
-## 開発お願い
-本当はいろいろ対応させたり、アドオンにしたかったですが、
-私の技術不足でできませんでした。
-出来る人は開発をお願いします。
+Some source code in this project were introduced from Assimp.
+So our license was inherited from it.
 
-XFileHelperおよびXFileParseはAssimpのC++言語のソースコードをPythonに対応させる形にしています。
-大量の文字の構文解析には時間がかかるので、正規表現で文字列分割させてます。
-一度メモリに展開し、さらに数値に変換するのでメモリを多く食います
+```
+AN EXCEPTION applies to all files in the ./models-nonbsd folder.
+These are 3d models for testing purposes, from various free sources
+on the internet. They are - unless otherwise stated - copyright of
+their respective creators, which may impose additional requirements
+on the use of their work. For any of these models, see
+<model-name>.source.txt for more legal information. Contact us if you
+are a copyright holder and believe that we credited you inproperly or
+if you don't want your files to appear in the repository.
+```
