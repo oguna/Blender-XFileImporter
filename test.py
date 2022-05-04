@@ -1,6 +1,7 @@
 import unittest
 from xfile_parser import XFileParser
 
+
 class TestStringMethods(unittest.TestCase):
 
     def load(self, filename):
@@ -32,9 +33,9 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(len(mesh.positions), 24)
         self.assertEqual(len(mesh.colors[0]), 24)
 
-    #def test_OV_GetNextToken(self):
+    # def test_OV_GetNextToken(self):
         #mesh = self.load('models/OV_GetNextToken')
-        #pass
+        # pass
 
     def test_test(self):
         scene = self.load('models/test.x')
@@ -66,6 +67,7 @@ class TestStringMethods(unittest.TestCase):
         mesh = scene.rootNode.children[1].meshes[0]
         self.assertEqual(scene.anims[0].name, "AnimationSet0")
         self.assertEqual(len(mesh.positions), 1479)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,3 +1,6 @@
+from bpy.types import Operator
+from bpy.props import StringProperty, BoolProperty, EnumProperty
+from bpy_extras.io_utils import ImportHelper
 import bpy
 from .xfile_importer import load
 
@@ -7,6 +10,7 @@ bl_info = {
     "category": "Import-Export",
 }
 
+
 def read_some_data(context, filepath, use_some_setting, type):
     load(filepath)
     return {'FINISHED'}
@@ -14,9 +18,6 @@ def read_some_data(context, filepath, use_some_setting, type):
 
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
-from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty
-from bpy.types import Operator
 
 
 class ImportSomeData(Operator, ImportHelper):
@@ -55,10 +56,14 @@ class ImportSomeData(Operator, ImportHelper):
         return read_some_data(context, self.filepath, self.use_setting, self.type)
 
 # Only needed if you want to add into a dynamic menu
+
+
 def menu_func_import(self, context):
     self.layout.operator(ImportSomeData.bl_idname, text="DirectX XFile (.x)")
 
 # Register and add to the "file selector" menu (required to use F3 search "Text Import Operator" for quick access)
+
+
 def register():
     bpy.utils.register_class(ImportSomeData)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)

@@ -10,7 +10,8 @@ import zlib
 MSZIP_MAGIC = 0x4B43
 MSZIP_BLOCK = 32786
 
-class XFileParser(object): 
+
+class XFileParser(object):
     """The XFileParser reads a XFile either in text or binary form and builds a temporary
     data structure out of it.
 
@@ -76,12 +77,14 @@ class XFileParser(object):
             self.isBinaryFormat = True
             compressed = True
         else:
-            self.ThrowException('Unsupported xfile format '+self.buffer[8:12].deocde())
+            self.ThrowException('Unsupported xfile format ' +
+                                self.buffer[8:12].deocde())
         # float size
         self.binaryFloatSize = int(self.buffer[12:16])
 
-        if self.binaryFloatSize!=32 and self.binaryFloatSize!=64:
-            self.ThrowException('Unknown float size %d specified in xfile header.'%self.binaryFloatSize)
+        if self.binaryFloatSize != 32 and self.binaryFloatSize != 64:
+            self.ThrowException(
+                'Unknown float size %d specified in xfile header.' % self.binaryFloatSize)
 
         self.p += 16
 
@@ -95,25 +98,28 @@ class XFileParser(object):
                 ofs = struct.unpack_from('H', self.buffer, p1)[0]
                 p1 += 2
                 if ofs >= MSZIP_BLOCK:
-                    raise Exception("X: Invalid offset to next MSZIP compressed block")
+                    raise Exception(
+                        "X: Invalid offset to next MSZIP compressed block")
                 # check magic word
                 magic = struct.unpack_from('H', self.buffer, p1)[0]
                 p1 += 2
                 if magic != MSZIP_MAGIC:
-                    raise Exception("X: Unsupported compressed format, expected MSZIP header")
-                
+                    raise Exception(
+                        "X: Unsupported compressed format, expected MSZIP header")
+
                 # and advance to the next offset
                 p1 += ofs
                 est_out += MSZIP_BLOCK
-        
-            # Allocate storage and terminating zero and do the actual uncompressing    
+
+            # Allocate storage and terminating zero and do the actual uncompressing
             uncompressedEnd = 0
             while self.p + 3 < self.end:
                 ofs = struct.unpack_from('H', self.buffer, self.p)[0]
                 self.p += 4
                 if self.p + ofs > self.end + 2:
                     raise Exception("X: Unexpected EOF in compressed chunk")
-                uncompressed = zlib.decompress(self.buffer[self.p:], -8, MSZIP_BLOCK)
+                uncompressed = zlib.decompress(
+                    self.buffer[self.p:], -8, MSZIP_BLOCK)
                 uncompressedEnd += len(uncompressed)
                 self.p += ofs
             self.buffer = uncompressed
@@ -131,32 +137,31 @@ class XFileParser(object):
 
     def __del__(self):
         """ Destructor. Destroys all imported data along with it """
-        
-    
+
     def getImportedData(self) -> Scene:
         return self.scene
-            
+
     def ParseFile(self):
         running = True
         while(running):
             objectName = self.GetNextToken()
             if not objectName:
                 break
-            if objectName==b'template':
+            if objectName == b'template':
                 self.ParseDataObjectTemplate()
-            elif objectName==b'Frame':
+            elif objectName == b'Frame':
                 self.ParseDataObjectFrame()
-            elif objectName==b'Mesh':
+            elif objectName == b'Mesh':
                 mesh = self.ParseDataObjectMesh()
                 self.scene.globalMeshes.append(mesh)
-            elif objectName==b'AnimTicksPerSecond':
+            elif objectName == b'AnimTicksPerSecond':
                 self.ParseDataObjectAnimTicksPerSecond()
-            elif objectName==b'AnimationSet':
+            elif objectName == b'AnimationSet':
                 self.ParseDataObjectAnimationSet()
-            elif objectName==b'Material':
+            elif objectName == b'Material':
                 material = self.ParseDataObjectMaterial()
                 self.scene.globalMaterials.append(material)
-            elif objectName==b'}':
+            elif objectName == b'}':
                 warn("} found in dataObject")
             else:
                 warn("Unknown data object in animation of .x file")
@@ -171,9 +176,10 @@ class XFileParser(object):
             if (s == b'}'):
                 break
             if not s:
-                self.ThrowException("Unexpected end of file reached while parsing template definition")
+                self.ThrowException(
+                    "Unexpected end of file reached while parsing template definition")
 
-    def ParseDataObjectFrame(self, parent:Node|None=None):
+    def ParseDataObjectFrame(self, parent: Node | None = None):
         name = self.ReadHeadOfDataObject()
         node = Node(parent)
         node.name = name.decode()
@@ -190,26 +196,27 @@ class XFileParser(object):
                 node.parent = self.scene.rootNode
             else:
                 self.scene.rootNode = node
-        
+
         running = True
         while running:
             objectName = self.GetNextToken()
             if not objectName:
-                self.ThrowException("Unexpected end of file reached while parsing frame")
+                self.ThrowException(
+                    "Unexpected end of file reached while parsing frame")
             if objectName == b'}':
                 break
-            elif objectName==b'Frame':
+            elif objectName == b'Frame':
                 self.ParseDataObjectFrame(node)
-            elif objectName==b'FrameTransformMatrix':
+            elif objectName == b'FrameTransformMatrix':
                 node.trafoMatrix = self.ParseDataObjectTransformationMatrix()
-            elif objectName==b'Mesh':
+            elif objectName == b'Mesh':
                 mesh = self.ParseDataObjectMesh()
                 node.meshes.append(mesh)
             else:
                 warn("Unknown data object in frame in x file")
                 self.ParseUnknownDataObject()
 
-    def ParseDataObjectTransformationMatrix(self) -> tuple[float,...]:
+    def ParseDataObjectTransformationMatrix(self) -> tuple[float, ...]:
         # read header, we're not interested if it has a name
         self.ReadHeadOfDataObject()
 
@@ -235,7 +242,7 @@ class XFileParser(object):
         self.CheckForSemicolon()
         self.CheckForClosingBrace()
 
-        return (M11,M21,M31,M41,M12,M22,M32,M42,M13,M23,M33,M43,M14,M24,M34,M44)
+        return (M11, M21, M31, M41, M12, M22, M32, M42, M13, M23, M33, M43, M14, M24, M34, M44)
 
     def ParseDataObjectMesh(self) -> Mesh:
         mesh = Mesh()
@@ -253,8 +260,9 @@ class XFileParser(object):
         mesh.posFaces = []
         for a in range(numPosFaces):
             numIndices = self.ReadInt()
-            if numIndices<3:
-                self.ThrowException("Invalid index count %1% for face %2%.".format(numIndices, a))
+            if numIndices < 3:
+                self.ThrowException(
+                    "Invalid index count %1% for face %2%.".format(numIndices, a))
             # read indices
             face = Face()
             face.indices = []
@@ -269,19 +277,20 @@ class XFileParser(object):
             objectName = self.GetNextToken()
 
             if not objectName:
-                self.ThrowException("Unexpected end of file while parsing mesh structure")
-            elif objectName==b'}':
-                break # mesh finished
-            elif objectName==b'MeshNormals':
+                self.ThrowException(
+                    "Unexpected end of file while parsing mesh structure")
+            elif objectName == b'}':
+                break  # mesh finished
+            elif objectName == b'MeshNormals':
                 self.ParseDataObjectMeshNormals(mesh)
-            elif objectName==b'MeshTextureCoords':
+            elif objectName == b'MeshTextureCoords':
                 self.ParseDataObjectMeshTextureCoords(mesh)
-            elif objectName==b'MeshVertexColors':
+            elif objectName == b'MeshVertexColors':
                 self.ParseDataObjectMeshVertexColors(mesh)
-            elif objectName==b'MeshMaterialList':
+            elif objectName == b'MeshMaterialList':
                 self.ParseDataObjectMeshMaterialList(mesh)
-            elif objectName==b'VertexDuplicationIndices':
-                self.ParseUnknownDataObject() # we'll ignore vertex duplication indices
+            elif objectName == b'VertexDuplicationIndices':
+                self.ParseUnknownDataObject()  # we'll ignore vertex duplication indices
             elif objectName == b'XSkinMeshHeader':
                 self.ParseDataObjectSkinMeshHeader(mesh)
             elif objectName == b'SkinWeights':
@@ -334,35 +343,37 @@ class XFileParser(object):
         b4 = self.ReadFloat()
         c4 = self.ReadFloat()
         d4 = self.ReadFloat()
-        bone.offsetMatrix = (a1,b1,c1,d1,a2,b2,c2,d2,a3,b3,c3,d3,a4,b4,c4,d4)
-             
+        bone.offsetMatrix = (a1, b1, c1, d1, a2, b2, c2,
+                             d2, a3, b3, c3, d3, a4, b4, c4, d4)
+
         self.CheckForSemicolon()
         self.CheckForClosingBrace()
 
     def ParseDataObjectSkinMeshHeader(self, mesh: Mesh):
         self.ReadHeadOfDataObject()
 
-        self.ReadInt() # maxSkinWeightsPerVertex
-        self.ReadInt() # maxSkinWeightsPerFace
-        self.ReadInt() # numBonesInMesh
+        self.ReadInt()  # maxSkinWeightsPerVertex
+        self.ReadInt()  # maxSkinWeightsPerFace
+        self.ReadInt()  # numBonesInMesh
 
         self.CheckForClosingBrace()
 
-    def ParseDataObjectMeshNormals(self,mesh: Mesh):
+    def ParseDataObjectMeshNormals(self, mesh: Mesh):
         self.ReadHeadOfDataObject()
-        
+
         # read count
         numNormals = self.ReadInt()
 
-        # read normal vectors  
+        # read normal vectors
         for a in range(numNormals):
             mesh.normals.append(self.ReadVector3())
 
         # read normal indices
         numFaces = self.ReadInt()
         if numFaces != len(mesh.posFaces):
-            self.ThrowException("Normal face count does not match vertex face count.")
-        
+            self.ThrowException(
+                "Normal face count does not match vertex face count.")
+
         for a in range(0, numFaces):
             numIndices = self.ReadInt()
             face = Face()
@@ -374,14 +385,15 @@ class XFileParser(object):
 
         self.CheckForClosingBrace()
 
-    def ParseDataObjectMeshTextureCoords(self,mesh: Mesh):
+    def ParseDataObjectMeshTextureCoords(self, mesh: Mesh):
         self.ReadHeadOfDataObject()
-        if mesh.numTextures +1 > AI_MAX_NUMBER_OF_TEXTURECOORDS:
+        if mesh.numTextures + 1 > AI_MAX_NUMBER_OF_TEXTURECOORDS:
             self.ThrowException("Too many sets of texture coordinates")
 
         numCoords = self.ReadInt()
         if numCoords != len(mesh.positions):
-            self.ThrowException("Texture coord count does not match vertex count")
+            self.ThrowException(
+                "Texture coord count does not match vertex count")
 
         coords = [0]*numCoords
         for a in range(numCoords):
@@ -392,23 +404,24 @@ class XFileParser(object):
 
         self.CheckForClosingBrace()
 
-    def ParseDataObjectMeshVertexColors(self,mesh: Mesh):
+    def ParseDataObjectMeshVertexColors(self, mesh: Mesh):
         self.ReadHeadOfDataObject()
-        if mesh.numColorSets+1>AI_MAX_NUMBER_OF_COLOR_SETS:
-            self.ThrowException( "Too many colorsets")
+        if mesh.numColorSets+1 > AI_MAX_NUMBER_OF_COLOR_SETS:
+            self.ThrowException("Too many colorsets")
         colors = mesh.colors[mesh.numColorSets]
         mesh.numColorSets += 1
 
         numColors = self.ReadInt()
-        if numColors!=len(mesh.positions):
-            self.ThrowException( "Vertex color count does not match vertex count")
+        if numColors != len(mesh.positions):
+            self.ThrowException(
+                "Vertex color count does not match vertex count")
 
-        colors.extend([(0.0,0.0,0.0,1.0)]*numColors)
+        colors.extend([(0.0, 0.0, 0.0, 1.0)]*numColors)
         for a in range(numColors):
             index = self.ReadInt()
             if index >= len(mesh.positions):
                 self.ThrowException("Vertex color index out of bounds")
-            
+
             colors[index] = self.ReadRGBA()
             # HACK: (thom) Maxon Cinema XPort plugin puts a third separator here, kwxPort puts a comma.
             # Ignore gracefully.
@@ -420,7 +433,7 @@ class XFileParser(object):
 
     def ParseDataObjectMeshMaterialList(self, mesh: Mesh):
         self.ReadHeadOfDataObject()
-        
+
         # read material count
         # unsigned int numMaterials =
         self.ReadInt()
@@ -428,7 +441,8 @@ class XFileParser(object):
         numMatIndices = self.ReadInt()
 
         if numMatIndices != len(mesh.posFaces) and numMatIndices != 1:
-            self.ThrowException( "Per-Face material index count does not match face count.")
+            self.ThrowException(
+                "Per-Face material index count does not match face count.")
 
         # read per-face material indices
         for a in range(numMatIndices):
@@ -436,9 +450,9 @@ class XFileParser(object):
 
         # in version 03.02, the face indices end with two semicolons.
         # commented out version check, as version 03.03 exported from blender also has 2 semicolons
-        if not self.isBinaryFormat: # && MajorVersion == 3 && MinorVersion <= 2)
-            if self.p<self.end and self.buffer[self.p:self.p+1]==b';':
-                self.p+=1
+        if not self.isBinaryFormat:  # && MajorVersion == 3 && MinorVersion <= 2)
+            if self.p < self.end and self.buffer[self.p:self.p+1] == b';':
+                self.p += 1
 
         # if there was only a single material index, replicate it on all faces
         while len(mesh.faceMaterials) < len(mesh.posFaces):
@@ -449,9 +463,10 @@ class XFileParser(object):
         while running:
             objectName = self.GetNextToken()
             if len(objectName) == 0:
-                self.ThrowException( "Unexpected end of file while parsing mesh material list.")
-            elif objectName==b'}':
-                break # material list finished
+                self.ThrowException(
+                    "Unexpected end of file while parsing mesh material list.")
+            elif objectName == b'}':
+                break  # material list finished
             elif objectName == b'{':
                 matName = self.GetNextToken()
                 material = Material()
@@ -465,11 +480,10 @@ class XFileParser(object):
                 mesh.materials.append(material)
             elif objectName == b';':
                 pass
-                #ignore
+                # ignore
             else:
                 warn("Unknown data object in material list in x file")
                 self.ParseUnknownDataObject()
-
 
     def ParseDataObjectMaterial(self) -> Material:
         material = Material()
@@ -485,27 +499,28 @@ class XFileParser(object):
         material.specularExponent = self.ReadFloat()
         material.specular = self.ReadRGB()
         material.emissive = self.ReadRGB()
-        
+
         # read other data objects
         running = True
         while running:
             objectName = self.GetNextToken()
             if not objectName:
-                self.ThrowException( "Unexpected end of file while parsing mesh material")
-            elif objectName==b'}':
-                break # material finished
-            elif objectName==b'TextureFilename' or objectName==b'TextureFileName':
+                self.ThrowException(
+                    "Unexpected end of file while parsing mesh material")
+            elif objectName == b'}':
+                break  # material finished
+            elif objectName == b'TextureFilename' or objectName == b'TextureFileName':
                 # some exporters write "TextureFileName" instead.
                 texname = self.ParseDataObjectTextureFilename()
                 material.textures.append(TexEntry(texname))
-            elif objectName==b'NormalmapFilename' or objectName==b'NormalmapFileName':
+            elif objectName == b'NormalmapFilename' or objectName == b'NormalmapFileName':
                 # one exporter writes out the normal map in a separate filename tag
                 texname = self.ParseDataObjectTextureFilename()
-                material.textures.append(TexEntry(texname,True))
+                material.textures.append(TexEntry(texname, True))
             else:
                 warn("Unknown data object in material in x file")
                 self.ParseUnknownDataObject()
-        
+
         return material
 
     def ParseDataObjectAnimTicksPerSecond(self):
@@ -524,10 +539,11 @@ class XFileParser(object):
         while running:
             objectName = self.GetNextToken()
             if not objectName:
-                self.ThrowException( "Unexpected end of file while parsing animation set.")
-            elif objectName==b'}':
-                break # animation set finished
-            elif objectName==b'Animation':
+                self.ThrowException(
+                    "Unexpected end of file while parsing animation set.")
+            elif objectName == b'}':
+                break  # animation set finished
+            elif objectName == b'Animation':
                 self.ParseDataObjectAnimation(anim)
             else:
                 warn('Unknown data object in animation set in x file')
@@ -543,7 +559,8 @@ class XFileParser(object):
             objectName = self.GetNextToken()
 
             if not objectName:
-                self.ThrowException( "Unexpected end of file while parsing animation.")
+                self.ThrowException(
+                    "Unexpected end of file while parsing animation.")
             elif objectName == b'}':
                 break
             elif objectName == b'AnimationKey':
@@ -571,40 +588,43 @@ class XFileParser(object):
             time = self.ReadInt()
 
             # read keys
-            if keyType==0:
+            if keyType == 0:
                 # read count
-                if self.ReadInt()!=4:
-                    self.ThrowException( "Invalid number of arguments for quaternion key in animation")
+                if self.ReadInt() != 4:
+                    self.ThrowException(
+                        "Invalid number of arguments for quaternion key in animation")
 
                 time = float(time)
                 w = self.ReadFloat()
                 x = self.ReadFloat()
                 y = self.ReadFloat()
                 z = self.ReadFloat()
-                key = (time,(w,x,y,z))
+                key = (time, (w, x, y, z))
                 animBone.rotKeys.append(key)
 
                 self.CheckForSemicolon()
 
-            elif keyType==1 or keyType==2:
+            elif keyType == 1 or keyType == 2:
                 # read count
-                if self.ReadInt()!=3:
-                    self.ThrowException( "Invalid number of arguments for vector key in animation")
-                
+                if self.ReadInt() != 3:
+                    self.ThrowException(
+                        "Invalid number of arguments for vector key in animation")
+
                 time = float(time)
                 value = self.ReadVector3()
-                key = (time,value)
+                key = (time, value)
 
-                if keyType==2:
+                if keyType == 2:
                     animBone.posKeys.append(key)
                 else:
                     animBone.scaleKeys.append(key)
 
-            elif keyType == 3 or keyType==4:
+            elif keyType == 3 or keyType == 4:
                 # read count
-                if self.ReadInt()!=16:
-                    self.ThrowException( "Invalid number of arguments for matrix key in animation")
-                
+                if self.ReadInt() != 16:
+                    self.ThrowException(
+                        "Invalid number of arguments for matrix key in animation")
+
                 # read matrix
                 time = float(time)
                 a1 = self.ReadFloat()
@@ -623,10 +643,12 @@ class XFileParser(object):
                 b4 = self.ReadFloat()
                 c4 = self.ReadFloat()
                 d4 = self.ReadFloat()
-                animBone.trafoKeys.append((time,(a1,b1,c1,d1,a2,b2,c2,d2,a3,b3,c3,d3,a4,b4,c4,d4)))
+                animBone.trafoKeys.append(
+                    (time, (a1, b1, c1, d1, a2, b2, c2, d2, a3, b3, c3, d3, a4, b4, c4, d4)))
                 self.CheckForSemicolon()
             else:
-                self.ThrowException('Unknown key type %1 in animation.' % keyType)
+                self.ThrowException(
+                    'Unknown key type %1 in animation.' % keyType)
             self.CheckForSeparator()
         self.CheckForClosingBrace()
 
@@ -638,10 +660,9 @@ class XFileParser(object):
         if not name:
             warn('Unexpected end of file while parsing unknown segment.')
         # some exporters write double backslash paths out. We simply replace them if we find them
-        while name.find(b'\\\\')>0:
-            name = name.replace(b'\\\\',b'\\',1)
+        while name.find(b'\\\\') > 0:
+            name = name.replace(b'\\\\', b'\\', 1)
         return name
-        
 
     def ParseUnknownDataObject(self):
         # find opening delimiter
@@ -649,24 +670,26 @@ class XFileParser(object):
         while running:
             t = self.GetNextToken()
             if len(t) == 0:
-                self.ThrowException("Unexpected end of file while parsing unknown segment.")
-            
+                self.ThrowException(
+                    "Unexpected end of file while parsing unknown segment.")
+
             if t == b"{":
                 break
-        
+
         counter = 1
 
         # parse until closing delimiter
         while counter > 0:
             t = self.GetNextToken()
-            
+
             if len(t) == 0:
-                self.ThrowException("Unexpected end of file while parsing unknown segment.")
-            
+                self.ThrowException(
+                    "Unexpected end of file while parsing unknown segment.")
+
             if t == b"{":
-                counter+=1
+                counter += 1
             elif t == b"}":
-                counter-=1
+                counter -= 1
         return
 
     def FindNextNoneWhiteSpace(self):
@@ -676,14 +699,14 @@ class XFileParser(object):
 
         running = True
         while running:
-            while (self.p<self.end)and(self.buffer[self.p:self.p+1]==b' ' or self.buffer[self.p:self.p+1]==b'\r' or self.buffer[self.p:self.p+1]==b'\n'):
+            while (self.p < self.end) and (self.buffer[self.p:self.p+1] == b' ' or self.buffer[self.p:self.p+1] == b'\r' or self.buffer[self.p:self.p+1] == b'\n'):
                 if self.buffer[self.p:self.p+1] == b'\n':
                     self.lineNumber += 1
                 self.p += 1
-            if self.p>=self.end:
+            if self.p >= self.end:
                 return
             # check if this is a comment
-            if (self.buffer[self.p:self.p+2] == b'//') or self.buffer[self.p:self.p+1]==b'#':
+            if (self.buffer[self.p:self.p+2] == b'//') or self.buffer[self.p:self.p+1] == b'#':
                 self.ReadUntilEndOfLine()
                 pass
             else:
@@ -703,9 +726,9 @@ class XFileParser(object):
             l = 0
 
             # standalone tokens
-            if tok==1:
+            if tok == 1:
                 # name token
-                if self.end-self.p<4:
+                if self.end-self.p < 4:
                     return s
                 l = self.ReadBinDWord()
                 bounds = self.end - self.p
@@ -718,24 +741,24 @@ class XFileParser(object):
                 return s
             elif tok == 2:
                 # string token
-                if self.end-self.p<4:
+                if self.end-self.p < 4:
                     return s
                 l = self.ReadBinDWord()
-                if self.end-self.p<l:
+                if self.end-self.p < l:
                     return s
                 s = self.buffer[self.p:self.p+l]
-                self.p +=l+2
+                self.p += l+2
                 return s
-            elif tok==3:
+            elif tok == 3:
                 # integer token
-                self.p+=4
+                self.p += 4
                 return b'<integer>'
-            elif tok== 5:
+            elif tok == 5:
                 # GUID token
                 self.p += 16
                 return b'<guid>'
             elif tok == 6:
-                if self.end -self.p<4:
+                if self.end - self.p < 4:
                     return s
                 l = self.ReadBinDWord()
                 self.p += l*4
@@ -764,55 +787,55 @@ class XFileParser(object):
                 return b'>'
             elif tok == 0x12:
                 return b"."
-            elif tok ==  0x13:
+            elif tok == 0x13:
                 return b","
-            elif tok ==  0x14:
+            elif tok == 0x14:
                 return b";"
-            elif tok ==  0x1f:
+            elif tok == 0x1f:
                 return b"template"
-            elif tok ==  0x28:
+            elif tok == 0x28:
                 return b"WORD"
-            elif tok ==  0x29:
+            elif tok == 0x29:
                 return b"DWORD"
-            elif tok ==  0x2a:
+            elif tok == 0x2a:
                 return b"FLOAT"
-            elif tok ==  0x2b:
+            elif tok == 0x2b:
                 return b"DOUBLE"
-            elif tok ==  0x2c:
+            elif tok == 0x2c:
                 return b"CHAR"
-            elif tok ==  0x2d:
+            elif tok == 0x2d:
                 return b"UCHAR"
-            elif tok ==  0x2e:
+            elif tok == 0x2e:
                 return b"SWORD"
-            elif tok ==  0x2f:
+            elif tok == 0x2f:
                 return b"SDWORD"
-            elif tok ==  0x30:
+            elif tok == 0x30:
                 return b"void"
-            elif tok ==  0x31:
+            elif tok == 0x31:
                 return b"string"
-            elif tok ==  0x32:
+            elif tok == 0x32:
                 return b"unicode"
-            elif tok ==  0x33:
+            elif tok == 0x33:
                 return b"cstring"
-            elif tok ==  0x34:
+            elif tok == 0x34:
                 return b"array"
 
         # process text-formatted file
         else:
             self.FindNextNoneWhiteSpace()
-            if self.p>=self.end:
+            if self.p >= self.end:
                 return s
 
-            while (self.p<self.end)and(not str.isspace(chr(self.buffer[self.p]))):
+            while (self.p < self.end) and (not str.isspace(chr(self.buffer[self.p]))):
                 # either keep token delimiters when already holding a token, or return if first valid char
                 tmp = self.buffer[self.p:self.p+1]
-                if tmp==b';' or tmp ==b'}' or tmp==b'{' or tmp==b',':
+                if tmp == b';' or tmp == b'}' or tmp == b'{' or tmp == b',':
                     if not s:
                         s += tmp
-                        self.p+=1
-                    break # stop for delimiter
-                s+=self.buffer[self.p:self.p+1]
-                self.p+=1
+                        self.p += 1
+                    break  # stop for delimiter
+                s += self.buffer[self.p:self.p+1]
+                self.p += 1
 
         return s
 
@@ -841,7 +864,6 @@ class XFileParser(object):
         if token != b';':
             self.ThrowException("Semicolon expected.")
 
-
     def CheckForSeparator(self):
         """ checks for a separator char, either a ',' or a ';' """
         if self.isBinaryFormat:
@@ -855,12 +877,12 @@ class XFileParser(object):
         if self.isBinaryFormat:
             return
         self.FindNextNoneWhiteSpace()
-        if self.p>=self.end:
+        if self.p >= self.end:
             return
         # test and skip
-        #if self.buffer[self.p:self.p+1] == b';' or self.buffer[self.p:self.p+1] == b',':
+        # if self.buffer[self.p:self.p+1] == b';' or self.buffer[self.p:self.p+1] == b',':
         if self.buffer[self.p] == 59 or self.buffer[self.p] == 44:
-            self.p+=1
+            self.p += 1
 
     def GetNextTokenAsString(self) -> bytes:
         poString = b''
@@ -869,52 +891,53 @@ class XFileParser(object):
             return self.GetNextToken()
 
         self.FindNextNoneWhiteSpace()
-        if self.p>=self.end:
+        if self.p >= self.end:
             self.ThrowException("Unexpected end of file while parsing string")
 
-        if self.buffer[self.p:self.p+1]!=b'"':
+        if self.buffer[self.p:self.p+1] != b'"':
             self.ThrowException("Expected quotation mark.")
-        self.p+=1
-        while self.p<self.end and self.buffer[self.p:self.p+1] !=b'"':
+        self.p += 1
+        while self.p < self.end and self.buffer[self.p:self.p+1] != b'"':
             poString += self.buffer[self.p:self.p+1]
-            self.p+=1
+            self.p += 1
 
-        if self.p>=self.end-1:
+        if self.p >= self.end-1:
             self.ThrowException("Unexpected end of file while parsing string")
         if self.buffer[self.p+1:self.p+2] != b';' or self.buffer[self.p:self.p+1] != b'"':
-            self.ThrowException("Expected quotation mark and semicolon at the end of a string.")
-        self.p+=2
+            self.ThrowException(
+                "Expected quotation mark and semicolon at the end of a string.")
+        self.p += 2
 
         return poString
 
     def ReadUntilEndOfLine(self):
         if self.isBinaryFormat:
             return
-        while self.p<self.end:
+        while self.p < self.end:
             tmp = self.buffer[self.p:self.p+1]
-            if tmp==b'\n' or tmp==b'\r':
-                self.p+=1
-                self.lineNumber+=1
+            if tmp == b'\n' or tmp == b'\r':
+                self.p += 1
+                self.lineNumber += 1
                 return
-            self.p+=1
+            self.p += 1
 
     def ReadBinWord(self) -> int:
-        assert (self.end-self.p>=2)
-        tmp = struct.unpack_from('H',self.buffer,self.p)[0]
-        self.p+=2
+        assert (self.end-self.p >= 2)
+        tmp = struct.unpack_from('H', self.buffer, self.p)[0]
+        self.p += 2
         return tmp
 
     def ReadBinDWord(self) -> int:
-        assert (self.end-self.p>=4)
-        tmp = struct.unpack_from('I',self.buffer,self.p)[0]
-        self.p+=4
+        assert (self.end-self.p >= 4)
+        tmp = struct.unpack_from('I', self.buffer, self.p)[0]
+        self.p += 4
         return tmp
 
     def ReadInt(self) -> int:
         if self.isBinaryFormat:
-            if self.binaryNumCount==0 and (self.end-self.p >= 2):
+            if self.binaryNumCount == 0 and (self.end-self.p >= 2):
                 tmp = self.ReadBinWord()
-                if tmp==0x06 and (self.end-self.p>=4):
+                if tmp == 0x06 and (self.end-self.p >= 4):
                     self.binaryNumCount = self.ReadBinDWord()
                 else:
                     self.binaryNumCount = 1
@@ -930,20 +953,20 @@ class XFileParser(object):
 
             # check preceeding minus sign
             isNegative = False
-            if self.buffer[self.p:self.p+1]==b'-':
+            if self.buffer[self.p:self.p+1] == b'-':
                 isNegative = False
-                self.p+=1
+                self.p += 1
             # at least one digit expected
             if not self.buffer[self.p:self.p+1].isdigit():
-                self.ThrowException( 'Number expected.')
-                
+                self.ThrowException('Number expected.')
+
             # read digits
             number = 0
-            while self.p<self.end:
+            while self.p < self.end:
                 if not self.buffer[self.p:self.p+1].isdigit():
                     break
                 number = number * 10 + int(self.buffer[self.p:self.p+1])
-                self.p+=1
+                self.p += 1
 
             self.CheckForSeparator()
             if isNegative:
@@ -953,15 +976,15 @@ class XFileParser(object):
 
     def ReadFloat(self) -> float:
         if self.isBinaryFormat:
-            if (self.binaryNumCount == 0) and (self.end -self.p >= 2):
+            if (self.binaryNumCount == 0) and (self.end - self.p >= 2):
                 tmp = self.ReadBinWord()
-                if(tmp == 0x07 ) and (self.end -self.p>=4):
+                if(tmp == 0x07) and (self.end - self.p >= 4):
                     self.binaryNumCount = self.ReadBinDWord()
                 else:
                     self.binaryNumCount = 1
-            self.binaryNumCount-=1
+            self.binaryNumCount -= 1
             if self.binaryFloatSize == 8:
-                if self.end-self.p>=8 :
+                if self.end-self.p >= 8:
                     result = struct.unpack_from('d', self.buffer, self.p)[0]
                     self.p += 8
                     return result
@@ -969,7 +992,7 @@ class XFileParser(object):
                     self.p = self.end
                     return 0
             else:
-                if self.end -self.p >= 4:
+                if self.end - self.p >= 4:
                     result = struct.unpack_from('f', self.buffer, self.p)[0]
                     self.p += 4
                     return result
@@ -984,25 +1007,26 @@ class XFileParser(object):
         # Reading is safe because of the terminating zero
 
         if self.buffer[self.p:self.p+9] == b'-1.#IND00' or self.buffer[self.p:self.p+8] == b'1.#IND00':
-            self.p+=9
+            self.p += 9
             self.CheckForSeparator()
             return 0.0
         elif self.buffer[self.p:self.p+8] == b'1.#QNAN0':
-            self.p+=8
+            self.p += 8
             self.CheckForSeparator()
             return 0.0
         result_ = 0.0
         #tmp_ = ''
         digitStart = self.p
         digitEnd = self.p
-        notSplitChar = [b'0',b'1',b'2',b'3',b'4',b'5',b'6',b'7',b'8',b'9',b'+',b'.',b'-',b'e',b'E']
-        while self.p<self.end:
-            c =self.buffer[self.p:self.p+1]
-            #if c.isdigit() or c=='+' or c=='.' or c=='-' or c=='e' or c=='E':
+        notSplitChar = [b'0', b'1', b'2', b'3', b'4', b'5',
+                        b'6', b'7', b'8', b'9', b'+', b'.', b'-', b'e', b'E']
+        while self.p < self.end:
+            c = self.buffer[self.p:self.p+1]
+            # if c.isdigit() or c=='+' or c=='.' or c=='-' or c=='e' or c=='E':
             if c in notSplitChar:
                 #tmp_ += c
                 digitEnd = self.p
-                self.p+=1
+                self.p += 1
             else:
                 break
         tmp = self.buffer[digitStart:digitEnd]
@@ -1014,21 +1038,21 @@ class XFileParser(object):
         x = self.ReadFloat()
         y = self.ReadFloat()
         self.TestForSeparator()
-        return (x,y)
+        return (x, y)
 
     def ReadVector3(self) -> tuple[float, float, float]:
         x = self.ReadFloat()
         y = self.ReadFloat()
         z = self.ReadFloat()
         self.TestForSeparator()
-        return (x,y,z)
+        return (x, y, z)
 
     def ReadRGB(self) -> tuple[float, float, float]:
         r = self.ReadFloat()
         g = self.ReadFloat()
         b = self.ReadFloat()
         self.TestForSeparator()
-        return (r,g,b)
+        return (r, g, b)
 
     def ReadRGBA(self) -> tuple[float, float, float, float]:
         r = self.ReadFloat()
@@ -1036,24 +1060,23 @@ class XFileParser(object):
         b = self.ReadFloat()
         a = self.ReadFloat()
         self.TestForSeparator()
-        return (r,g,b,a)
+        return (r, g, b, a)
 
-
-    def ThrowException(self,text: str):
+    def ThrowException(self, text: str):
         """Throws an exception with a line number and the given text."""
         if(self.isBinaryFormat):
-            raise ImportError( text)
+            raise ImportError(text)
         else:
             raise ImportError('Line %d: %s' % (self.lineNumber, text))
 
-    def FilterHierarchy(self,node: Node):
+    def FilterHierarchy(self, node: Node):
         """Filters the imported hierarchy for some degenerated cases that some
         exporters produce."""
 
         # if the node has just a single unnamed child containing a mesh, remove
         # the anonymous node inbetween. The 3DSMax kwXport plugin seems to produce this
         # mess in some cases
-        if(len(node.children)==1 and not node):
+        if(len(node.children) == 1 and not node):
             child = node.children[0]
             if (not child.name and child.meshes.cout > 0):
                 # transfer its meshes to us
@@ -1069,5 +1092,5 @@ class XFileParser(object):
                 node.children = []
 
         # recurse
-        for a in range(0,len(node.children)):
+        for a in range(0, len(node.children)):
             self.FilterHierarchy(node.children[a])
