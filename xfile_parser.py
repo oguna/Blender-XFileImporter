@@ -3,7 +3,7 @@ from __future__ import annotations
 import codecs
 import struct
 from warnings import *
-from xfile_helper import *
+from .xfile_helper import *
 import array
 import zlib
 
