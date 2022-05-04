@@ -4,6 +4,24 @@ This blender addon can import DirectX XFile (.x).
 
 ![](screenshot.jpg)
 
+## Features
+
+- [ ] Animation
+- [x] Binary
+
+## How to install
+
+### 1. "Code" -> "Download ZIP"
+![](step1.png)
+### 2. "Edit" -> "Preferences..."
+![](step2.png)
+### 3. "Add-ons" -> "Install..."
+![](step3.png)
+### 4. Select downloaded zip file -> "Install Add-on"
+![](step4.png)
+### 5. Check "Import-Export: DirectX XFile Format"
+![](step5.png)
+
 ## License
 
 Our license is based on the modified, 3-clause BSD-License.
