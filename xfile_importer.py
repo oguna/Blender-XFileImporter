@@ -61,8 +61,7 @@ def convert_mesh(mesh, basepath: str):
     # generate blender mesh
     newMesh = bpy.data.meshes.new('MyMesh')
     newMesh.from_pydata(positions, [], indexBufferSource)
-    for i in range(len(newMesh.vertices)):
-        newMesh.vertices[i].normal = normals[i]
+    newMesh.normals_split_custom_set_from_vertices(normals)
     if uvs:
         uvl = newMesh.uv_layers.new(do_init=False)
         uv_data = uvl.data
