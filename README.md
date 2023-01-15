@@ -22,6 +22,31 @@ This blender addon can import DirectX XFile (.x).
 ### 5. Check "Import-Export: DirectX XFile Format"
 ![](step5.png)
 
+## Hot to test
+### Pure Python
+
+Modify `xfile_parser.py` as follow,
+
+```diff
+- from .xfile_helper import *
++ from xfile_helper import *
+```
+
+Then, run follow command,
+
+```
+python test.py
+```
+
+### In Blender
+
+After you install this addon into your Blender,
+run like follow command,
+
+```
+C:\"Program Files"\"Blender Foundation"\"Blender 3.4"\blender --background --python test_in_blender.py
+```
+
 ## License
 
 Our license is based on the modified, 3-clause BSD-License.
