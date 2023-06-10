@@ -113,13 +113,14 @@ class XFileParser(object):
 
             # Allocate storage and terminating zero and do the actual uncompressing
             uncompressedEnd = 0
+            uncompressed = bytearray()
             while self.p + 3 < self.end:
                 ofs = struct.unpack_from('H', self.buffer, self.p)[0]
                 self.p += 4
                 if self.p + ofs > self.end + 2:
                     raise Exception("X: Unexpected EOF in compressed chunk")
-                uncompressed = zlib.decompress(
-                    self.buffer[self.p:], -8, MSZIP_BLOCK)
+                z = zlib.decompressobj(wbits=-15, zdict=uncompressed)
+                uncompressed += z.decompress(self.buffer[self.p:])
                 uncompressedEnd += len(uncompressed)
                 self.p += ofs
             self.buffer = uncompressed
