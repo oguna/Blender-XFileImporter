@@ -2,7 +2,7 @@ import unittest
 import os
 import bpy
 
-class TestAddon(unittest.TestCase):
+class ImporterTest(unittest.TestCase):
     def test_addon_enabled(self):
         self.assertIsNotNone(bpy.ops.import_scene.x)
 
@@ -11,5 +11,7 @@ class TestAddon(unittest.TestCase):
         result = bpy.ops.import_scene.x(filepath=filepath)
         self.assertSetEqual(result, {'FINISHED'})
 
-suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestAddon)
-unittest.TextTestRunner().run(suite)
+if __name__ == "__main__":
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ImporterTest)
+    runner = unittest.TextTestRunner()
+    runner.run(suite)

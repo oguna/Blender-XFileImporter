@@ -2,7 +2,7 @@ import unittest
 from xfile_parser import XFileParser
 
 
-class TestStringMethods(unittest.TestCase):
+class ParserTest(unittest.TestCase):
 
     def load(self, filename):
         with open(filename, 'br') as f:

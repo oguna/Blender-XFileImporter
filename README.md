@@ -23,28 +23,13 @@ This blender addon can import DirectX XFile (.x).
 ![](step5.png)
 
 ## Hot to test
-### Pure Python
 
-Modify `xfile_parser.py` as follow,
-
-```diff
-- from .xfile_helper import *
-+ from xfile_helper import *
+```shell
+python test_parser.py
 ```
 
-Then, run follow command,
-
-```
-python test.py
-```
-
-### In Blender
-
-After you install this addon into your Blender,
-run like follow command,
-
-```
-C:\"Program Files"\"Blender Foundation"\"Blender 3.4"\blender --background --python test_in_blender.py
+```shell
+"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe"  --background --python test_importer.py
 ```
 
 ## License

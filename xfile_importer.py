@@ -1,14 +1,11 @@
 from __future__ import annotations
-import sys
-import struct
-import array
-from bpy_extras.image_utils import load_image
 import bpy
 import os
-from .xfile_parser import XFileParser
+from .xfile_parser import (XFileParser, Mesh, Node)
+from mathutils import Matrix
 
 
-def convert_mesh(mesh, basepath: str):
+def convert_mesh(mesh: Mesh, basepath: str):
     from bpy_extras import node_shader_utils
 
     # vertex list
@@ -37,40 +34,26 @@ def convert_mesh(mesh, basepath: str):
             if mesh.numTextures > 0:
                 a = mesh.texCoords[mesh.posFaces[i].indices[j]]
                 uvs.append(a)
-    # index list
-    """
-    indicesPerMaterial = []
-    for i in range(len(mesh.materials)):
-        indicesPerMaterial.append([])
-    for i in range(len(materialIndices)):
-        indicesPerMaterial[materialIndices[i]].append(i);
-    indexCounts = [0] * len(indicesPerMaterial)
-    indexBufferSource = []
-    indexBufferSourceIndex = 0;
-    for i in range(len(indicesPerMaterial)):
-        for j in range(len(indicesPerMaterial[i])):
-            offset = indicesPerMaterial[i][j] * 3
-            indexBufferSource.append((offset + 0, offset + 1, offset + 2))
-            indexBufferSourceIndex+=1
-        indexCounts[i] = len(indicesPerMaterial[i])
-    """
+
     indexBufferSource = []
     for i in range(len(materialIndices)):
         indexBufferSource.append((i*3+0, i*3+1, i*3+2))
 
     # generate blender mesh
-    newMesh = bpy.data.meshes.new('MyMesh')
+    newMesh = bpy.data.meshes.new(mesh.materials[0].name)
     newMesh.from_pydata(positions, [], indexBufferSource)
-    newMesh.normals_split_custom_set_from_vertices(normals)
+    
+    newMesh.normals_split_custom_set(normals)
+    
     if uvs:
-        uvl = newMesh.uv_layers.new(do_init=False)
+        uvl = newMesh.uv_layers.new()
         uv_data = uvl.data
         for i in range(len(uv_data)):
             uv_data[i].uv = uvs[i]
             uv_data[i].uv[1] = -uv_data[i].uv[1]
 
     # load textures
-    texture_dic = {}
+    image_dic = {}
     for oldMat in mesh.materials:
         if oldMat.textures:
             texEntry = oldMat.textures[0]
@@ -80,19 +63,17 @@ def convert_mesh(mesh, basepath: str):
             tex_name = texEntry.name.decode('shift-jis')
             tex_name = tex_name.split('*')[0]
 
+            if tex_name in image_dic:
+                continue
+
             tex_path = os.path.join(basepath, tex_name)
-            not_found = False
+            img = None
             try:
                 img = bpy.data.images.load(filepath=tex_path)
             except:
-                not_found = True
-            texture_dic[tex_name] = bpy.data.textures.new(
-                os.path.basename(tex_path), type='IMAGE')
-            if not not_found:
-                texture_dic[tex_name].image = img
-                texture_dic[tex_name].image.alpha_mode = 'PREMUL'
-            # use alpha
-            #texture_dic[tex_name].image.use_alpha = True
+                print(f"texture not found: {tex_path}")
+            
+            image_dic[tex_name] = img
 
     # add material
     for oldMat in mesh.materials:
@@ -110,18 +91,14 @@ def convert_mesh(mesh, basepath: str):
         # texture
         if oldMat.textures:
             texEntry = oldMat.textures[0]
-            # if temp_material.texture_slots[0] == None:
-            #    temp_material.texture_slots.add()
-            # for MMD
             tex_name = texEntry.name.decode('shift-jis')
             tex_name = tex_name.split('*')[0]
-            temp_material_wrap.base_color_texture.image = texture_dic[tex_name].image
-            temp_material_wrap.base_color_texture.texcoords = "UV"
-            #temp_material_wrap.base_color_texture.uv_layer = "UV_Data"
-            # MMD Settings
-            #temp_material_wrap.base_color_texture.use_map_color_diffuse = True
-            temp_material_wrap.base_color_texture.use_alpha = True
-            #temp_material_wrap.base_color_texture.blend_type = 'MULTIPLY'
+            
+            if tex_name in image_dic and image_dic[tex_name] is not None:
+                temp_material_wrap.base_color_texture.image = image_dic[tex_name]
+                temp_material_wrap.base_color_texture.texcoords = "UV"
+                # MMD Settings
+                temp_material_wrap.base_color_texture.use_alpha = True
 
     # set material
     for i in range(len(materialIndices)):
@@ -132,18 +109,19 @@ def convert_mesh(mesh, basepath: str):
     return newMesh
 
 
-def convert_node(node, basepath):
+def convert_node(node: Node, basepath: str, transform: Matrix):
     if not node:
         return
     for mesh in node.meshes:
         mesh = convert_mesh(mesh, basepath)
-        obj_mesh = bpy.data.objects.new('MyObj', mesh)
-        bpy.context.scene.collection.objects.link(obj_mesh)
+        obj_mesh = bpy.data.objects.new(node.name, mesh)
+        obj_mesh.matrix_world = transform
+        bpy.context.collection.objects.link(obj_mesh)
     for child in node.children:
-        convert_node(child, basepath)
+        convert_node(child, basepath, transform)
 
 
-def load(filename: str):
+def load(filepath: str, transform: Matrix):
 
     if bpy.ops.object.mode_set.poll():
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -151,8 +129,8 @@ def load(filename: str):
     if bpy.ops.object.select_all.poll():
         bpy.ops.object.select_all(action='DESELECT')
 
-    filepath = filename
     basepath = os.path.dirname(filepath)
+    filename_wo_ext = os.path.splitext(os.path.basename(filepath))[0]
     with open(filepath, 'br') as f:
         buffer = f.read()
     parser = XFileParser(buffer)
@@ -160,8 +138,9 @@ def load(filename: str):
 
     for mesh in oldScene.globalMeshes:
         mesh = convert_mesh(mesh, basepath)
-        obj_mesh = bpy.data.objects.new('MyObj', mesh)
-        bpy.context.scene.collection.objects.link(obj_mesh)
-    convert_node(oldScene.rootNode, basepath)
+        obj_mesh = bpy.data.objects.new(filename_wo_ext, mesh)
+        obj_mesh.matrix_world = transform
+        bpy.context.collection.objects.link(obj_mesh)
+    convert_node(oldScene.rootNode, basepath, transform)
 
     return
