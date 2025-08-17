@@ -1,6 +1,8 @@
 # Blender XFile Importer
 
-This blender addon can import DirectX XFile (.x).
+[![Parser Test](https://github.com/oguna/Blender-XFileImporter/actions/workflows/parser-test.yml/badge.svg)](https://github.com/oguna/Blender-XFileImporter/actions/workflows/parser-test.yml)
+
+Blender Addon to import DirectX XFile (.x)
 
 ![](screenshot.jpg)
 
