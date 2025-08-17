@@ -3,11 +3,12 @@ import bpy
 import os
 from .xfile_parser import (XFileParser, Mesh, Node)
 from mathutils import Matrix
+from bpy_extras import node_shader_utils
+import numpy as np
+import math
 
 
-def convert_mesh(mesh: Mesh, basepath: str):
-    from bpy_extras import node_shader_utils
-
+def convert_mesh(mesh: Mesh, basepath: str) -> bpy.types.Mesh:
     # vertex list
     positions = []
     normals = []
@@ -81,24 +82,43 @@ def convert_mesh(mesh: Mesh, basepath: str):
         temp_material_wrap = node_shader_utils.PrincipledBSDFWrapper(
             temp_material, is_readonly=False)
         temp_material_wrap.use_nodes = True
+        # Diffuse (RGBA) -> Base Color & Alpha
         temp_material_wrap.base_color = oldMat.diffuse[:3]
-        # temp_material_wrap.specular = oldMat.specularExponent#oldMat.specular
-        #temp_material_wrap.specular_tint = oldMat.specularExponent
-        #temp_material_wrap.emission_color = oldMat.emissive
-        #temp_material_wrap.alpha = oldMat.diffuse[3]
+        temp_material_wrap.alpha = oldMat.diffuse[3]
+        # Emissive -> Emission Color
+        temp_material_wrap.emission_color = oldMat.emissive
+        # Specular -> Specular
+        spec_color = oldMat.specular
+        spec_intensity = spec_color[0] * 0.299 + spec_color[1] * 0.587 + spec_color[2] * 0.114
+        temp_material_wrap.specular = spec_intensity
+        # Specular Exponent -> Roughness
+        if oldMat.specularExponent > 0:
+            roughness = math.sqrt(2 / (oldMat.specularExponent + 2))
+            temp_material_wrap.roughness = roughness
+        else:
+            temp_material_wrap.roughness = 1.0
+
         newMesh.materials.append(temp_material)
 
         # texture
         if oldMat.textures:
             texEntry = oldMat.textures[0]
-            tex_name = texEntry.name.decode('shift-jis')
-            tex_name = tex_name.split('*')[0]
+            tex_name = texEntry.name.decode('shift-jis') # TODO: to be provided from import setting
+            tex_name = tex_name.split('*')[0] # MMD Settings
             
             if tex_name in image_dic and image_dic[tex_name] is not None:
                 temp_material_wrap.base_color_texture.image = image_dic[tex_name]
                 temp_material_wrap.base_color_texture.texcoords = "UV"
-                # MMD Settings
-                temp_material_wrap.base_color_texture.use_alpha = True
+
+                if img.channels == 4:
+                    # TODO: Only set transparency if the image file has an alpha channel.
+                    # Get related nodes from the node tree
+                    node_tree = temp_material.node_tree
+                    principled_bsdf_node = temp_material_wrap.node_principled_bsdf
+                    texture_node = temp_material_wrap.base_color_texture.node_image
+
+                    # Link texture alpha to material alpha
+                    node_tree.links.new(principled_bsdf_node.inputs['Alpha'], texture_node.outputs['Alpha'])
 
     # set material
     for i in range(len(materialIndices)):
