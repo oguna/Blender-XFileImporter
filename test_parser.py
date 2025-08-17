@@ -63,7 +63,7 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(len(mesh.positions), 3205)
 
     def test_dwarf(self):
-        scene = self.load('models-nonbsd/dwarf.X')
+        scene = self.load('models-nonbsd/dwarf.x')
         mesh = scene.rootNode.children[1].meshes[0]
         self.assertEqual(scene.anims[0].name, "AnimationSet0")
         self.assertEqual(len(mesh.positions), 1479)
